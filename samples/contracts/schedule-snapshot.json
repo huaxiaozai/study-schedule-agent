@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "now": "2026-09-13T01:00:00Z",
+  "timezone": "Asia/Shanghai",
+  "courses": [
+    {
+      "id": "course-ds",
+      "name": "数据结构",
+      "meetingBlocks": [
+        {
+          "id": "course-block-001",
+          "ownerId": "course-ds",
+          "start": "2026-09-14T00:00:00Z",
+          "end": "2026-09-14T01:30:00Z",
+          "locked": true,
+          "kind": "COURSE"
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-001",
+      "courseId": "course-ds",
+      "title": "完成数据结构实验报告",
+      "deadline": "2026-09-16T12:00:00Z",
+      "estimatedDurationMinutes": 120,
+      "priority": 3,
+      "status": "TODO",
+      "scheduledBlocks": []
+    }
+  ],
+  "lockedBlocks": [],
+  "activeFacts": [],
+  "planningRevision": 7
+}

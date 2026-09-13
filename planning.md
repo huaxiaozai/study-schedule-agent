@@ -21,16 +21,17 @@
 
 ## 当前进度
 
-更新时间：2026-09-09
+更新时间：2026-09-13
 
 | 项目 | 状态 | 结果 |
 | --- | --- | --- |
 | 阅读技术文档并识别熊翔职责 | 已完成 | 已确认契约、Agent、排程、用户模型、架构评审和核心测试 |
 | 明确正式交接对象 | 已完成 | 向黄健华交付动作和校验能力；接收全员集成材料 |
 | 技术栈讨论 | 已完成 | 决定继续使用 Java，选择适合期末项目的最小技术组合 |
-| 项目代码和构建文件 | 未开始 | 当前工作区尚无实现代码 |
-| 领域契约 | 未开始 | 等待创建 Java 类型和 JSON 样例 |
-| 排程 Agent 和用户模型 | 未开始 | 等待契约冻结后开发 |
+| 项目代码和构建文件 | 已完成 | 已创建 Java 21/Spring Boot 3.5.16 工程、Maven Wrapper 和启动测试 |
+| 领域契约 | 已完成 | 四个契约、支撑类型、正常/异常 JSON 样例及 8 个序列化测试已通过 |
+| 硬约束校验器 | 已完成 | 5 类规则和 4 个边界/确定性场景共 9 个测试通过 |
+| 确定性排程、Agent 和用户模型 | 未开始 | 下一步实现 Task 3 的固定输入排程 |
 
 ## 文件规划
 
@@ -64,11 +65,11 @@
 
 **Produces:** 其他成员可以独立编译使用的 Java 类型、字段说明和正常及异常 JSON 样例。
 
-- [ ] 用 Java `record` 定义四个契约，保留文档规定的核心字段。
-- [ ] 统一 `schemaVersion`、日期时间、时区、状态和错误码表示。
-- [ ] 编写 Jackson 序列化往返测试，确认样例 JSON 不丢字段。
-- [ ] 增加缺少必填字段、未知枚举和过期版本样例。
-- [ ] 将 `ImportProposal` 样例交给赵欢，将 `ActionSpec` 与 `ScheduleSnapshot` 样例交给黄健华，将状态样例交给樊华钰。
+- [x] 用 Java `record` 定义四个契约，保留文档规定的核心字段。
+- [x] 统一 `schemaVersion`、日期时间、时区、状态和错误码表示。
+- [x] 编写 Jackson 序列化往返测试，确认样例 JSON 不丢字段。
+- [x] 增加缺少必填字段、未知枚举和过期版本样例。
+- [x] 在 `samples/contracts/README.md` 建立交接索引：赵欢接收 `ImportProposal`，黄健华接收 `ActionSpec` 与 `ScheduleSnapshot`，樊华钰接收状态和 `ProfileFact` 样例。
 
 **验收：** `mvnw.cmd test -Dtest=ContractSerializationTest` 通过，四个样例能序列化并反序列化为等价对象。
 
@@ -87,10 +88,10 @@
 
 **Produces:** 排程器和黄健华的 `ActionExecutor` 共用的 `validate(snapshot, candidate)` 接口。
 
-- [ ] 先写截止时间、时间重叠、锁定块、禁止时段和每日上限的失败测试。
-- [ ] 实现 `List<ConstraintViolation> validate(ScheduleSnapshot snapshot, CandidateBlock candidate)`。
-- [ ] 为每个违反项提供稳定错误码、涉及对象和人类可读说明。
-- [ ] 添加跨午夜、截止时间相等和空闲区间边界测试。
+- [x] 先写截止时间、时间重叠、锁定块、禁止时段和每日上限的失败测试。
+- [x] 实现 `List<ConstraintViolation> validate(ScheduleSnapshot snapshot, CandidateBlock candidate)`。
+- [x] 为每个违反项提供稳定错误码、涉及对象和人类可读说明。
+- [x] 添加跨午夜、截止时间相等和空闲区间边界测试。
 
 **验收：** 相同输入始终返回相同顺序的违反项；规则测试全部通过。
 
@@ -210,7 +211,7 @@
 
 ## 下一步计划
 
-1. 创建 `backend` Maven 工程并固定 Java 21、Spring Boot 3.5.x 和包名 `com.studyplanner`。
-2. 先完成 Task 1 的四个契约、枚举、序列化测试和 JSON 样例。
-3. 在契约冻结当天把样例分别发给赵欢、黄健华和樊华钰，随后开始硬约束校验器。
-4. 每完成一个任务立即更新本文件的复选框和“当前进度”表。
+1. 为 Task 3 编写截止升序、优先级降序和 ID 升序的固定输入测试。
+2. 展开可用时间窗口并减去课程、任务、锁定块和禁止时段。
+3. 按 30 分钟粒度生成候选块，并为无法完整排入的任务返回 `PlanningGap`。
+4. 增加 100 个任务、14 天窗口、重复 30 次的确定性与耗时测试。

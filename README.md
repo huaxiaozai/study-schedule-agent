@@ -36,7 +36,7 @@ plans/
 
 ## 当前状态
 
-项目已完成职责分析、技术栈选择和初步任务规划，代码工程尚未创建。下一步先建立 Java 后端工程并冻结 `ImportProposal`、`ScheduleSnapshot`、`ActionSpec` 和 `ProfileFact` 四个跨模块契约。
+项目已创建 Java 21/Spring Boot 后端工程，冻结四个跨模块契约，并完成共用的硬约束校验器。正常及异常联调样例位于 `samples/contracts`；当前完整测试为 18 个全部通过。下一步实现确定性贪心排程器。
 
 ## 文档
 

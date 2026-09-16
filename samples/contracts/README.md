@@ -10,6 +10,10 @@
 | `schedule-snapshot.json` | 黄健华 | 动作执行前的版本、目标和硬约束校验 |
 | `action-spec.json` | 黄健华、樊华钰 | 事务执行输入及前端动作预览/状态映射 |
 | `profile-fact.json` | 樊华钰 | 用户事实展示、修改、否认和删除 |
+| `action-executor-handoff.md` | 黄健华 | 执行顺序、幂等、撤销条件和稳定错误码 |
+| `action-conflict-response.json` | 黄健华、樊华钰 | 过期 `baseRevision` 的 409 响应 |
+| `action-idempotent-replay.json` | 黄健华 | 重复 `operationKey` 返回原执行结果 |
+| `action-undo-flow.json` | 黄健华、樊华钰 | 基于执行记录的撤销请求和成功回执 |
 
 ## 异常样例
 
@@ -31,4 +35,10 @@
 
 ```powershell
 .\mvnw.cmd test '-Dtest=ContractSerializationTest'
+```
+
+执行器交接样例可单独验证：
+
+```powershell
+.\mvnw.cmd test '-Dtest=ActionExecutorHandoffSamplesTest'
 ```

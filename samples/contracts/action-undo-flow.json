@@ -1,0 +1,15 @@
+{
+  "request": {
+    "operationKey": "undo-op-20260913-001",
+    "executionId": "execution-001",
+    "baseRevision": 8
+  },
+  "response": {
+    "httpStatus": 200,
+    "executionId": "execution-002",
+    "reversedExecutionId": "execution-001",
+    "operationKey": "undo-op-20260913-001",
+    "actionStatus": "APPLIED",
+    "planningRevision": 9
+  }
+}

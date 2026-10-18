@@ -1,7 +1,6 @@
 package com.studyplanner.importing;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,11 +32,16 @@ public final class ImportService {
     public synchronized ImportJobView submit(ImportSource source) {
         Objects.requireNonNull(source, "source is required");
         ImportJob existing = repository.findByRequestKey(source.requestKey()).orElse(null);
-        if (existing != null) {
+        if (existing != null && !(failedWith(existing, MODEL_UNAVAILABLE) && existing.proposal() == null)) {
             return ImportJobView.from(existing);
         }
 
-        ImportJob processing = repository.save(ImportJob.processing(source, clock.instant()));
+        ImportJob processing = ImportJob.processing(source, clock.instant());
+        if (existing != null) {
+            processing = new ImportJob(processing.requestKey(), processing.sourceType(), processing.fileName(),
+                    processing.status(), null, List.of(), existing.createdAt(), processing.updatedAt());
+        }
+        processing = repository.save(processing);
         try {
             ImportProposal proposal = Objects.requireNonNull(
                     modelPort.propose(source),
@@ -66,7 +70,8 @@ public final class ImportService {
         if (current.status() == ImportStatus.COMMITTED) {
             return ImportJobView.from(current);
         }
-        if (current.status() != ImportStatus.REVIEW) {
+        boolean retry = failedWith(current, COMMIT_FAILED) && current.proposal() != null;
+        if (current.status() != ImportStatus.REVIEW && !retry) {
             throw new IllegalStateException("only a reviewed import can be committed");
         }
         if (current.proposal() != null
@@ -74,11 +79,17 @@ public final class ImportService {
             throw new IllegalArgumentException("proposalId does not match the reviewed import");
         }
 
+        validateConfirmation(confirmedProposal);
+        if (retry && !current.proposal().equals(confirmedProposal)) {
+            throw new IllegalArgumentException("retry must use the previously confirmed proposal");
+        }
+        ImportJob confirmed = repository.save(current.withProposal(
+                confirmedProposal, ImportStatus.REVIEW, clock.instant()));
         ImportProposal committedProposal = copyWithStatus(confirmedProposal, ImportStatus.COMMITTED);
         try {
             commitPort.commit(committedProposal);
         } catch (RuntimeException exception) {
-            ImportJob failed = current.failed(
+            ImportJob failed = confirmed.failed(
                     List.of(new ContractError(
                             COMMIT_FAILED,
                             "导入提交失败，请重试",
@@ -87,8 +98,24 @@ public final class ImportService {
             return ImportJobView.from(repository.save(failed));
         }
 
-        ImportJob committed = current.withProposal(committedProposal, ImportStatus.COMMITTED, clock.instant());
+        ImportJob committed = confirmed.withProposal(committedProposal, ImportStatus.COMMITTED, clock.instant());
         return ImportJobView.from(repository.save(committed));
+    }
+
+    private static boolean failedWith(ImportJob job, String code) {
+        return job.status() == ImportStatus.FAILED
+                && job.errors().stream().anyMatch(error -> code.equals(error.code()));
+    }
+
+    private static void validateConfirmation(ImportProposal proposal) {
+        if (proposal.status() != ImportStatus.REVIEW
+                || !proposal.ambiguities().isEmpty() || !proposal.errors().isEmpty()) {
+            throw new IllegalArgumentException("proposal must be reviewed with all ambiguities and errors resolved");
+        }
+        if ("ASSIGNMENT".equals(proposal.kind())
+                && (proposal.deadline() == null || proposal.durationMinutes() == null)) {
+            throw new IllegalArgumentException("assignment deadline and durationMinutes are required");
+        }
     }
 
     private ImportJob findRequired(String requestKey) {

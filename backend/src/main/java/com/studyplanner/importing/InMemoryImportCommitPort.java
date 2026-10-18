@@ -1,7 +1,8 @@
 package com.studyplanner.importing;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.studyplanner.contract.ImportProposal;
 
@@ -11,17 +12,21 @@ import com.studyplanner.contract.ImportProposal;
  */
 public final class InMemoryImportCommitPort implements ImportCommitPort {
 
-    private final CopyOnWriteArrayList<ImportProposal> committed = new CopyOnWriteArrayList<>();
+    private final Map<String, ImportProposal> committed = new LinkedHashMap<>();
 
     @Override
-    public void commit(ImportProposal proposal) {
+    public synchronized void commit(ImportProposal proposal) {
         if (proposal == null) {
             throw new IllegalArgumentException("proposal is required");
         }
-        committed.add(proposal);
+        ImportProposal existing = committed.get(proposal.proposalId());
+        if (existing != null && !existing.equals(proposal)) {
+            throw new IllegalArgumentException("proposalId already committed with different content");
+        }
+        committed.putIfAbsent(proposal.proposalId(), proposal);
     }
 
-    public List<ImportProposal> committedProposals() {
-        return List.copyOf(committed);
+    public synchronized List<ImportProposal> committedProposals() {
+        return List.copyOf(committed.values());
     }
 }

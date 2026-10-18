@@ -52,7 +52,7 @@ public record ImportJob(
                 fileName,
                 newStatus,
                 newProposal,
-                errors,
+                List.of(),
                 createdAt,
                 newUpdatedAt);
     }

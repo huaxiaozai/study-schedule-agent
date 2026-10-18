@@ -39,3 +39,23 @@ curl -X POST "http://localhost:8080/api/v1/imports/request-demo-001/confirm" \
 ```
 
 当前确认端口使用内存实现。接入业务模块后，应替换为事务型保存，不能保留隐式成功行为。
+
+## 校对与失败恢复约定
+
+- 确认提案的 `status` 必须为 `REVIEW`，`ambiguities` 和 `errors` 必须清空；`ASSIGNMENT` 还必须填写 `deadline`、正数 `durationMinutes`。未满足时返回 HTTP 400 / `INVALID_IMPORT_REQUEST`，不会调用提交端口。
+- `MODEL_UNAVAILABLE` 后重新上传相同 `X-Request-Key` 可再次识别；已成功识别或提交的请求继续返回原结果。
+- `COMMIT_FAILED` 后查询任务，使用其中保存的已确认 `proposal` 再次调用确认端点。同键重新上传只返回现有失败记录，不会覆盖已确认内容。重试不能修改提案；这避免第一次实际写入但回执丢失时产生内容冲突。
+- `ImportCommitPort` 实现必须按 `proposalId` 幂等。相同 ID、相同内容返回原结果；相同 ID、不同内容拒绝。正式数据库适配器需要在业务写入事务内落实此要求。
+- 模型或提交恢复成功后，响应中的旧错误清空。
+
+## 可重复验证
+
+在 `backend` 目录运行：
+
+```powershell
+.\mvnw.cmd test '-Dtest=ImportReviewRegressionTest,ImportControllerTest,ImportSchedulingFlowTest'
+```
+
+覆盖识别重试、确认校验、提交恢复、提交成功但回执丢失的幂等恢复，以及固定样例到任务候选、Agent 排程的离线交接。任务候选映射只在测试中模拟业务模块；`courseCandidate` 是名称候选，不可直接当正式课程 ID。
+
+本阶段仍为内存/Mock 演示，不代表 MySQL 事务写入、撤销或真实模型已验收。

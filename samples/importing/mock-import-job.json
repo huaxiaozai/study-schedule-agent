@@ -1,0 +1,22 @@
+{
+  "requestKey": "request-demo-001",
+  "sourceType": "SCREENSHOT",
+  "fileName": "course-table.png",
+  "status": "REVIEW",
+  "proposal": {
+    "schemaVersion": 1,
+    "proposalId": "proposal-request-demo-001",
+    "kind": "ASSIGNMENT",
+    "title": "截图导入待核对",
+    "courseCandidate": null,
+    "deadline": null,
+    "durationMinutes": null,
+    "sourceEvidence": ["course-table.png"],
+    "ambiguities": ["请核对任务名称、课程和截止时间"],
+    "status": "REVIEW",
+    "errors": []
+  },
+  "errors": [],
+  "createdAt": "2026-10-10T02:00:00Z",
+  "updatedAt": "2026-10-10T02:00:00Z"
+}

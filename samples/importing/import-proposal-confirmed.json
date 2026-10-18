@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "proposal-request-demo-001",
+  "kind": "ASSIGNMENT",
+  "title": "完成数据结构实验报告",
+  "courseCandidate": "数据结构",
+  "deadline": "2026-10-12T12:00:00Z",
+  "durationMinutes": 120,
+  "sourceEvidence": ["course-table.png"],
+  "ambiguities": [],
+  "status": "REVIEW",
+  "errors": []
+}

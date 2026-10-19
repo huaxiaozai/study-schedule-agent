@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 0,
+  "key": "planning.preferredStudyPeriod",
+  "value": "MORNING",
+  "scope": "GLOBAL",
+  "strength": 0.5,
+  "source": "USER_EXPLICIT",
+  "state": "ACTIVE",
+  "evidenceIds": [],
+  "version": 1
+}

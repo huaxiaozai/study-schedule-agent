@@ -1,0 +1,75 @@
+{
+  "scenarioId": "offline-demo-001",
+  "fixedClock": "2026-09-13T01:00:00Z",
+  "snapshot": {
+    "schemaVersion": 1,
+    "now": "2026-09-13T01:00:00Z",
+    "timezone": "Asia/Shanghai",
+    "courses": [
+      {
+        "id": "course-ds",
+        "name": "数据结构",
+        "meetingBlocks": [
+          {
+            "id": "course-block-001",
+            "ownerId": "course-ds",
+            "start": "2026-09-13T01:30:00Z",
+            "end": "2026-09-13T02:30:00Z",
+            "locked": true,
+            "kind": "COURSE"
+          }
+        ]
+      }
+    ],
+    "tasks": [
+      {
+        "id": "task-001",
+        "courseId": "course-ds",
+        "title": "完成数据结构实验报告",
+        "deadline": "2026-09-14T12:00:00Z",
+        "estimatedDurationMinutes": 120,
+        "priority": 3,
+        "status": "TODO",
+        "scheduledBlocks": []
+      }
+    ],
+    "lockedBlocks": [],
+    "activeFacts": [],
+    "planningRevision": 7
+  },
+  "agentRequest": {
+    "operationKey": "op-demo-move-001",
+    "instruction": "把实验报告安排到今天上午十一点",
+    "modelResponse": {
+      "type": "MOVE_TASK",
+      "targets": ["task-001"],
+      "changes": {
+        "start": "2026-09-13T03:00:00Z",
+        "end": "2026-09-13T05:00:00Z"
+      },
+      "reasonFacts": ["用户明确指定今天上午十一点"],
+      "ambiguities": []
+    }
+  },
+  "durationFeedback": {
+    "originalEstimateMinutes": 100,
+    "samples": [
+      {"estimatedMinutes": 100, "actualMinutes": 200, "evidenceId": "task-history-1"},
+      {"estimatedMinutes": 100, "actualMinutes": 200, "evidenceId": "task-history-2"},
+      {"estimatedMinutes": 100, "actualMinutes": 200, "evidenceId": "task-history-3"}
+    ]
+  },
+  "expected": {
+    "candidateBlocks": [
+      {"taskId": "task-001", "start": "2026-09-13T01:00:00Z", "end": "2026-09-13T01:30:00Z"},
+      {"taskId": "task-001", "start": "2026-09-13T02:30:00Z", "end": "2026-09-13T03:00:00Z"},
+      {"taskId": "task-001", "start": "2026-09-13T03:00:00Z", "end": "2026-09-13T03:30:00Z"},
+      {"taskId": "task-001", "start": "2026-09-13T03:30:00Z", "end": "2026-09-13T04:00:00Z"}
+    ],
+    "actionStatus": "NEEDS_CONFIRMATION",
+    "baseRevision": 7,
+    "adjustedDurationMinutes": 160,
+    "durationMultiplier": 1.6,
+    "executorPending": true
+  }
+}

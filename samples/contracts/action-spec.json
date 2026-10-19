@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "operationKey": "op-20260913-001",
+  "baseRevision": 7,
+  "type": "MOVE_TASK",
+  "targets": ["task-001"],
+  "changes": {
+    "start": "2026-09-14T11:00:00Z",
+    "end": "2026-09-14T13:00:00Z"
+  },
+  "authorizationScope": "schedule:write:self",
+  "reasonFacts": ["避开课程固定时间"],
+  "status": "NEEDS_CONFIRMATION",
+  "errors": []
+}

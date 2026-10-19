@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "proposal-invalid-001",
+  "kind": "ASSIGNMENT",
+  "courseCandidate": "数据结构",
+  "durationMinutes": 60,
+  "sourceEvidence": [],
+  "ambiguities": ["缺少标题"],
+  "status": "REVIEW",
+  "errors": []
+}

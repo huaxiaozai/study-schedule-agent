@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "key": "planning.preferredStudyPeriod",
+  "value": "EVENING",
+  "scope": "GLOBAL",
+  "strength": 0.9,
+  "source": "USER_EXPLICIT",
+  "state": "ACTIVE",
+  "evidenceIds": ["conversation-20260913-turn-4"],
+  "version": 3
+}

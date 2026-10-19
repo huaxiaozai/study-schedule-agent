@@ -1,0 +1,21 @@
+{
+  "request": {
+    "operationKey": "op-20260913-001",
+    "baseRevision": 7
+  },
+  "firstExecution": {
+    "httpStatus": 200,
+    "executionId": "execution-001",
+    "operationKey": "op-20260913-001",
+    "actionStatus": "APPLIED",
+    "planningRevision": 8
+  },
+  "replayExecution": {
+    "httpStatus": 200,
+    "executionId": "execution-001",
+    "operationKey": "op-20260913-001",
+    "actionStatus": "APPLIED",
+    "planningRevision": 8
+  },
+  "replayed": true
+}

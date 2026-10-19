@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationKey": "op-invalid-001",
+  "baseRevision": 7,
+  "type": "UNKNOWN_ACTION",
+  "targets": ["task-001"],
+  "changes": {},
+  "authorizationScope": "schedule:write:self",
+  "reasonFacts": [],
+  "status": "FAILED",
+  "errors": []
+}

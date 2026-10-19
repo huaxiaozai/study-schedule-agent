@@ -1,0 +1,13 @@
+{
+  "httpStatus": 409,
+  "operationKey": "op-20260913-001",
+  "actionStatus": "FAILED",
+  "baseRevision": 7,
+  "currentRevision": 8,
+  "retryable": true,
+  "error": {
+    "code": "REVISION_CONFLICT",
+    "message": "日程已发生变化，请刷新预览后重试",
+    "objectIds": ["schedule-user-001"]
+  }
+}

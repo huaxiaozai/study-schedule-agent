@@ -75,6 +75,12 @@ public class AgentAction {
         }
     }
 
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
+
+    public String getRequestHash() { return requestHash; }
+    public void setRequestHash(String requestHash) { this.requestHash = requestHash; }
+
     public AgentAction() {}
 
     public Long getId() { return id; }

@@ -151,6 +151,11 @@ public class DefaultConstraintValidator implements ActionConstraintValidator {
     private void validateUpdateBlock(Long userId, ActionCommand a, String tag, List<String> v,
                                      List<BlockSpan> batchBlocks) {
         TimeBlock self = requireOwnedBlock(userId, a.getTargetId(), tag, v);
+        if (self == null) return;
+        if (Boolean.TRUE.equals(self.getLocked())) {
+            v.add(tag + "时间块已锁定，不可修改");
+            return;
+        }
         checkStepBelongsToTask(userId, a, tag, v);
         LocalDateTime s = a.getStartAt();
         LocalDateTime e = a.getEndAt();
@@ -170,7 +175,10 @@ public class DefaultConstraintValidator implements ActionConstraintValidator {
     }
 
     private void validateDeleteBlock(Long userId, ActionCommand a, String tag, List<String> v) {
-        requireOwnedBlock(userId, a.getTargetId(), tag, v);
+        TimeBlock self = requireOwnedBlock(userId, a.getTargetId(), tag, v);
+        if (self != null && Boolean.TRUE.equals(self.getLocked())) {
+            v.add(tag + "时间块已锁定，不可删除");
+        }
     }
 
     // ---------------- 归属与取值辅助 ----------------

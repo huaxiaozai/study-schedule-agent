@@ -1,5 +1,7 @@
 package com.studyplanner.executor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.studyplanner.business.AppUserRepository;
 import com.studyplanner.business.AgentAction;
 import com.studyplanner.business.AgentActionRepository;
 import com.studyplanner.enums.ActionStatus;
@@ -17,12 +19,21 @@ public class ActionAuditService {
 
     private final AgentActionRepository agentActionRepository;
 
-    public ActionAuditService(AgentActionRepository agentActionRepository) {
+    private final AppUserRepository userRepository;
+    private final ObjectMapper objectMapper;
+
+    public ActionAuditService(AgentActionRepository agentActionRepository,
+                              AppUserRepository userRepository, ObjectMapper objectMapper) {
         this.agentActionRepository = agentActionRepository;
+        this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailure(Long userId, ActionBatchRequest request, String errorCode) {
+        // Same lock order as apply/undo; a late failure must not overwrite a successful retry.
+        if (userRepository.findByIdForUpdate(userId).isEmpty()) return;
+        String requestHash = RequestFingerprint.of(request, objectMapper);
         for (ActionCommand a : request.getActions()) {
             AgentAction action = agentActionRepository
                     .findByUserIdAndOperationKey(userId, a.getOperationKey())
@@ -33,6 +44,11 @@ public class ActionAuditService {
                         x.setType(a.getType());
                         return x;
                     });
+            if (action.getStatus() == ActionStatus.APPLIED || action.getStatus() == ActionStatus.UNDONE
+                    || (action.getId() != null && !requestHash.equals(action.getRequestHash()))) {
+                continue;
+            }
+            action.setRequestHash(requestHash);
             action.setStatus(ActionStatus.FAILED);
             action.setBaseRevision(request.getBaseRevision());
             action.setAppliedRevision(request.getBaseRevision());

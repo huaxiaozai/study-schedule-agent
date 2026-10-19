@@ -77,15 +77,17 @@ public class ActionExecutor {
 
         long current = user.getPlanningRevision();
         boolean revisionMatch = current == request.getBaseRevision();
-        List<String> violations = constraintValidator.validate(userId, request.getActions());
+        List<String> violations = new ArrayList<>(constraintValidator.validate(userId, request.getActions()));
         if (!revisionMatch) {
             violations.add(0, "baseRevision 已过期：当前版本=" + current
                     + "，提交基于版本=" + request.getBaseRevision() + "，请重新预览");
         }
 
         List<ActionItemResult> items = new ArrayList<>();
-        for (ActionCommand a : request.getActions()) {
-            items.add(simulate(userId, a));
+        if (violations.isEmpty()) {
+            for (ActionCommand a : request.getActions()) {
+                items.add(simulate(userId, a));
+            }
         }
 
         ActionPreviewResult result = new ActionPreviewResult();
@@ -109,6 +111,7 @@ public class ActionExecutor {
                 if (t == null) {
                     yield ActionItemResult.preview(a, a.getTargetId(), "TASK", null, null);
                 }
+                t = objectMapper.convertValue(t, Task.class);
                 String before = toJson(t);
                 mergeTask(t, a);
                 yield ActionItemResult.preview(a, t.getId(), "TASK", before, toJson(t));
@@ -124,6 +127,7 @@ public class ActionExecutor {
                 if (s == null) {
                     yield ActionItemResult.preview(a, a.getTargetId(), "STEP", null, null);
                 }
+                s = objectMapper.convertValue(s, TaskStep.class);
                 String before = toJson(s);
                 mergeStep(s, a);
                 yield ActionItemResult.preview(a, s.getId(), "STEP", before, toJson(s));
@@ -140,6 +144,7 @@ public class ActionExecutor {
                 if (b == null) {
                     yield ActionItemResult.preview(a, a.getTargetId(), "BLOCK", null, null);
                 }
+                b = objectMapper.convertValue(b, TimeBlock.class);
                 String before = toJson(b);
                 mergeBlock(b, a);
                 yield ActionItemResult.preview(a, b.getId(), "BLOCK", before, toJson(b));
@@ -172,6 +177,14 @@ public class ActionExecutor {
                 .findByUserIdAndOperationKeyIn(userId, keys).stream()
                 .collect(Collectors.toMap(AgentAction::getOperationKey, x -> x, (x, y) -> x));
 
+        String requestHash = RequestFingerprint.of(request, objectMapper);
+        for (AgentAction prior : existing.values()) {
+            if (!requestHash.equals(prior.getRequestHash()) || prior.getStatus() == ActionStatus.UNDONE) {
+                throw new BusinessException(ErrorCode.IDEMPOTENT_DUPLICATE,
+                        "operationKey 已绑定其他请求、旧记录或已撤销操作，请使用新的操作键");
+            }
+        }
+
         long appliedCount = existing.values().stream()
                 .filter(x -> x.getStatus() == ActionStatus.APPLIED).count();
         if (appliedCount == request.getActions().size()) {
@@ -202,7 +215,7 @@ public class ActionExecutor {
         // 5. 单事务顺序执行全部动作
         long newRev = baseRev + 1;
         Ctx ctx = new Ctx(userId, baseRev, newRev, user.getProfileVersion(),
-                toJson(request.getAuthorization()), request.getPlanDraftId(), existing);
+                toJson(request.getAuthorization()), request.getPlanDraftId(), existing, requestHash);
 
         List<ActionItemResult> items = new ArrayList<>();
         for (ActionCommand a : request.getActions()) {
@@ -421,6 +434,7 @@ public class ActionExecutor {
             action.setOperationKey(a.getOperationKey());
             action.setType(a.getType());
         }
+        action.setRequestHash(ctx.requestHash);
         action.setStatus(ActionStatus.APPLIED);
         action.setBaseRevision(ctx.baseRev);
         action.setAppliedRevision(ctx.newRev);
@@ -472,9 +486,10 @@ public class ActionExecutor {
         /** 来源草案ID，写入 agent_action.plan_draft_id，供第 4 周批量撤销分组 */
         final Long planDraftId;
         final Map<String, AgentAction> existing;
+        final String requestHash;
 
         Ctx(Long userId, long baseRev, long newRev, long profileVer, String authJson, Long planDraftId,
-            Map<String, AgentAction> existing) {
+            Map<String, AgentAction> existing, String requestHash) {
             this.userId = userId;
             this.baseRev = baseRev;
             this.newRev = newRev;
@@ -482,6 +497,7 @@ public class ActionExecutor {
             this.authJson = authJson;
             this.planDraftId = planDraftId;
             this.existing = existing;
+            this.requestHash = requestHash;
         }
     }
 }

@@ -73,10 +73,11 @@ public class UndoExecutor {
         if (key == null || key.isBlank()) {
             throw new BusinessException(400, "单步撤销必须提供 operationKey");
         }
+        AppUser user = lockUser(request.getUserId());
         AgentAction action = agentActionRepository
                 .findByUserIdAndOperationKey(request.getUserId(), key)
                 .orElseThrow(() -> new BusinessException(404, "动作记录不存在: operationKey=" + key));
-        return doUndo(request, List.of(action));
+        return doUndo(request, List.of(action), user);
     }
 
     // ==================== 批量撤销（按草案整体回滚） ====================
@@ -88,6 +89,7 @@ public class UndoExecutor {
         if (draftId == null) {
             throw new BusinessException(400, "批量撤销必须提供 planDraftId");
         }
+        AppUser user = lockUser(userId);
         List<AgentAction> all = agentActionRepository.findByUserIdAndPlanDraftId(userId, draftId);
         if (all.isEmpty()) {
             throw new BusinessException(ErrorCode.NO_ACTION_TO_UNDO,
@@ -108,7 +110,7 @@ public class UndoExecutor {
             throw new BusinessException(ErrorCode.NO_ACTION_TO_UNDO,
                     "该草案没有可撤销的动作: planDraftId=" + draftId);
         }
-        return doUndo(request, applied);
+        return doUndo(request, applied, user);
     }
 
     // ==================== 历史版本查询 ====================
@@ -126,12 +128,15 @@ public class UndoExecutor {
 
     // ==================== 主流程：加锁 → 校验版本 → 逐个反向 → 推进版本 ====================
 
-    private UndoResult doUndo(UndoRequest request, List<AgentAction> actions) {
+    private AppUser lockUser(Long userId) {
+        return userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(404, "用户不存在: id=" + userId));
+    }
+
+    private UndoResult doUndo(UndoRequest request, List<AgentAction> actions, AppUser user) {
         Long userId = request.getUserId();
 
-        // 1. 悲观行锁，串行化同一用户的撤销写入
-        AppUser user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new BusinessException(404, "用户不存在: id=" + userId));
+        // User lock was acquired before loading the action records.
 
         // 2. 乐观锁：撤销基于的版本必须与当前一致
         long baseRev = user.getPlanningRevision();
@@ -183,6 +188,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TASK_NOT_FOUND,
                                 "撤销失败：任务已不存在: id=" + id));
                 requireTaskUndoable(t);
+                requireUnchanged(t, a);
                 beforeSnapshot = toJson(t);
                 targetId = t.getId();
                 entityType = "TASK";
@@ -194,6 +200,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TASK_NOT_FOUND,
                                 "撤销失败：任务已不存在: id=" + id));
                 requireTaskUndoable(cur);
+                requireUnchanged(cur, a);
                 Task old = fromJson(a.getBeforeJson(), Task.class);
                 beforeSnapshot = toJson(cur);
                 restoreTask(cur, old);
@@ -216,6 +223,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TASK_STEP_NOT_FOUND,
                                 "撤销失败：任务步骤已不存在: id=" + id));
                 requireStepUndoable(s);
+                requireUnchanged(s, a);
                 beforeSnapshot = toJson(s);
                 targetId = s.getId();
                 entityType = "STEP";
@@ -227,6 +235,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TASK_STEP_NOT_FOUND,
                                 "撤销失败：任务步骤已不存在: id=" + id));
                 requireStepUndoable(cur);
+                requireUnchanged(cur, a);
                 TaskStep old = fromJson(a.getBeforeJson(), TaskStep.class);
                 beforeSnapshot = toJson(cur);
                 cur.setTaskId(old.getTaskId());
@@ -253,6 +262,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TIME_BLOCK_NOT_FOUND,
                                 "撤销失败：时间块已不存在: id=" + id));
                 requireBlockUndoable(b);
+                requireUnchanged(b, a);
                 beforeSnapshot = toJson(b);
                 targetId = b.getId();
                 entityType = "BLOCK";
@@ -264,6 +274,7 @@ public class UndoExecutor {
                         .orElseThrow(() -> new BusinessException(ErrorCode.TIME_BLOCK_NOT_FOUND,
                                 "撤销失败：时间块已不存在: id=" + id));
                 requireBlockUndoable(cur);
+                requireUnchanged(cur, a);
                 TimeBlock old = fromJson(a.getBeforeJson(), TimeBlock.class);
                 beforeSnapshot = toJson(cur);
                 restoreBlock(cur, old);
@@ -354,6 +365,29 @@ public class UndoExecutor {
     }
 
     // ==================== 快照读写 ====================
+
+    /** Ignore only persistence timestamps; all business fields must still match. */
+    private void requireUnchanged(Object current, AgentAction action) {
+        if (action.getAfterJson() == null) {
+            throw new BusinessException(ErrorCode.UNDO_NOT_ALLOWED, "缺少执行后快照，不可撤销");
+        }
+        try {
+            var expected = objectMapper.readTree(action.getAfterJson());
+            var actual = objectMapper.readTree(toJson(current));
+            if (!(expected instanceof com.fasterxml.jackson.databind.node.ObjectNode expectedObject)
+                    || !(actual instanceof com.fasterxml.jackson.databind.node.ObjectNode actualObject)) {
+                throw new BusinessException(ErrorCode.UNDO_NOT_ALLOWED, "动作快照格式错误");
+            }
+            expectedObject.remove(List.of("createdAt", "updatedAt"));
+            actualObject.remove(List.of("createdAt", "updatedAt"));
+            if (!expectedObject.equals(actualObject)) {
+                throw new BusinessException(ErrorCode.UNDO_NOT_ALLOWED,
+                        "对象已被后续操作修改，请刷新后重新选择撤销范围");
+            }
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.UNDO_NOT_ALLOWED, "动作快照无法解析，不可撤销");
+        }
+    }
 
     /** 从 before_json / after_json 中取出实体主键（快照即 JPA 实体序列化结果，含 id 字段） */
     private Long snapshotId(String json, String operationKey) {
